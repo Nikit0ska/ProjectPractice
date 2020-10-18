@@ -8,11 +8,12 @@ def insert_document(collection, data):
     return collection.insert_one(data).inserted_id
 
 
-# Create the client
 client = pymongo.MongoClient('localhost', 27017)
+db = client['TestDB']
+series_collection = db['test']
 
-# Connect to our database
-db = client['SeriesDB']
+test = {
+    "test": 1,
+}
 
-# Fetch our series collection
-series_collection = db['series']
+print(insert_document(series_collection, test))
