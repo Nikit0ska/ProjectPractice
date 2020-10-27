@@ -5,7 +5,7 @@ import pyodbc
 # Посмотреть установленные драйвера: pyodbc.drivers()
 
 class Connector:
-    def __init__(self, driver, server, port, uid=str(), pwd=str(), database=str(), autocommit=True):
+    def __init__(self, driver, server, port, database, uid=str(), pwd=str(), autocommit=True):
 
         self.connection = pyodbc.connect(f'DRIVER={{{driver}}};SERVER={server};PORT={port};DATABASE={database};UID={uid}'
                                              f';PWD={pwd};')
