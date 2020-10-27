@@ -17,3 +17,7 @@ class Connector:
         self.cursor = self.connection.execute(query)
         return self.cursor
 
+    def close_connection(self):
+        return self.connection.close()
+
+
