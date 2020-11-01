@@ -1,6 +1,6 @@
 import pyodbc
 import threading
-import time
+
 
 
 # Для MongoDB: https://www.cdata.com/drivers/mongodb/download/odbc/
@@ -78,6 +78,13 @@ def db_read_table(table_name):
     return conn.cursor.fetchall()
 
 
-# db_connect('PostgreSQL ODBC Driver(ANSI)', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
+def query_execute(query):
+    conn = get_conn_thread().connector
+    conn.execute(query)
+
+
+# db_connect('PostgreSQL ANSI', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
+# query_execute("INSERT INTO test VALUES(1, 'asd');")
 # print(db_read_table('test'))
 # db_disconnect()
+# print(pyodbc.drivers())
