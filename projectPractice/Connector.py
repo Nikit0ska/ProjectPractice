@@ -78,7 +78,6 @@ def db_read_table(table_name):
     return conn.cursor.fetchall()
 
 
-# print(pyodbc.drivers())
 # db_connect('PostgreSQL ODBC Driver(ANSI)', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
 # print(db_read_table('test'))
 # db_disconnect()
