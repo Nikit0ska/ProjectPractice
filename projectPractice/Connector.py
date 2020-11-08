@@ -83,12 +83,4 @@ def query_execute(query):
 
 
 # db_connect('PostgreSQL ANSI', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
-# print(threading.enumerate())
-# db_disconnect()
-# print(threading.enumerate())
-# db_connect('PostgreSQL ANSI', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
-# print(threading.enumerate())
-# query_execute("INSERT INTO test VALUES(3, 'test');")
-# print(db_read_table('test'))
-# db_disconnect()
 
