@@ -2,7 +2,6 @@ import pyodbc
 import threading
 
 
-
 # Для MongoDB: https://www.cdata.com/drivers/mongodb/download/odbc/
 # Для PosgreSQL: https://ftp.postgresql.org/pub/odbc/versions/msi/psqlodbc_12_02_0000.zip
 # Посмотреть установленные драйвера: pyodbc.drivers()
@@ -35,40 +34,40 @@ class Connector:
         self.connection = None
 
 
-def db_connect(driver, server, port, db, user='', password=''):
-    flag = True
-    for thread in threading.enumerate():
-        if thread.name == ('DB_CONNECTOR' + str(thread.ident)):
-            if not thread.connector.is_connected:
-                thread.connector = Connector(driver, server, port, db, uid=user, pwd=password)
-                flag = False
-            else:
+class ConnThread(threading.Thread):
+    def __init__(self, connector):
+        for thread in threading.enumerate():
+            if type(thread) == ConnThread:
                 raise ConnectionError
-    if flag:
-        conn_thread = threading.Thread(target=inf, daemon=True)
-        conn_thread.connector = Connector(driver, server, port, db, uid=user, pwd=password)
-        conn_thread.start()
-        conn_thread.setName('DB_CONNECTOR' + str(conn_thread.ident))
-        return "connection is successful"
+        super().__init__(target=self.__inf, daemon=True)
+        self.connector = connector
+
+    def __inf(self):
+        while True:
+            if not self.connector.is_connected:
+                break
+
+    def stop_thread(self):
+        self.connector.close_connection()
+        self.join()
 
 
-def inf():
-    while True:
-        pass
+def db_connect(driver, server, port, db, user='', password=''):
+    conn = Connector(driver, server, port, db, uid=user, pwd=password)
+    thread = ConnThread(conn)
+    thread.start()
 
 
 def get_conn_thread():
     for thread in threading.enumerate():
-        if thread.name == 'DB_CONNECTOR' + str(thread.ident):
-            if thread.connector.is_connected:
-                return thread
-            else:
-                raise ConnectionError
+        if type(thread) == ConnThread:
+            return thread
+    return None
 
 
 def db_disconnect():
-    thread = get_conn_thread()
-    thread.connector.close_connection()
+    conn_thread = get_conn_thread()
+    conn_thread.stop_thread()
     return 'disconnection is successful'
 
 
@@ -84,7 +83,4 @@ def query_execute(query):
 
 
 # db_connect('PostgreSQL ANSI', 'localhost', 5432, 'postgres', user='postgres', password='abc123')
-# query_execute("INSERT INTO test VALUES(1, 'asd');")
-# print(db_read_table('test'))
-# db_disconnect()
-# print(pyodbc.drivers())
+
