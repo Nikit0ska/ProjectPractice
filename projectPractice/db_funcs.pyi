@@ -1,0 +1,3 @@
+from projectPractice.ConnThread import ConnThread
+
+def __get_conn_thread() -> ConnThread:...
