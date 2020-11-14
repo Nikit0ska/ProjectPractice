@@ -1,12 +1,16 @@
 import pyodbc
+from projectPractice.errors import OdbcConnectionError
 
 
 class Connector:
     def __init__(self, driver, server, port, database, uid=str(), pwd=str(), autocommit=True):
-        self.connection = pyodbc.connect(
-            f'DRIVER={{{driver}}};SERVER={server};PORT={port};DATABASE={database};UID={uid}'
-            f';PWD={pwd};')
-
+        try:
+            self.connection = pyodbc.connect(
+                f'DRIVER={{{driver}}};SERVER={server};PORT={port};DATABASE={database};UID={uid}'
+                f';PWD={pwd};')
+        except pyodbc.Error as ex:
+            sqlstate = ex.args[1]
+            raise OdbcConnectionError(sqlstate) from None
         self.cursor = self.connection.cursor()
         self.connection.autocommit = autocommit
         self.is_connected = True
