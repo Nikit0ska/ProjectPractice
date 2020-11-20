@@ -5,11 +5,14 @@ def err_decor(db_func):
     def wrapper(*args):
         try:
             if len(args) > 0:
-                db_func(*args)
+                return db_func(*args)
             else:
-                db_func()
+                return db_func()
         except Error as ex:
-            raise OdbcError(ex.args[1]) from None
+            if len(ex.args) > 1:
+                raise OdbcError(ex.args[1]) from None
+            else:
+                raise OdbcError(ex.args[0]) from None
     return wrapper
 
 
