@@ -43,4 +43,24 @@ def db_read_table(table_name):
 @errors.err_decor
 def db_execute_query(query):
     conn = __get_conn_thread().connector
-    conn.execute(query)
+    if 'select' in query.lower():
+        content = conn.execute(query)
+        return content.fetchall()
+    else:
+        conn.execute(query)
+        return 1
+
+
+@errors.err_decor
+def db_create(db_name):
+    conn = __get_conn_thread().connector
+    conn.execute(f"CREATE DATABASE {db_name};")
+    return 1
+
+
+@errors.err_decor
+def db_drop(db_name):
+    conn = __get_conn_thread().connector
+    conn.execute(f"DROP DATABASE {db_name};")
+    return 1
+
