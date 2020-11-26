@@ -47,13 +47,52 @@ class CreatedTable:
             new_data.append(tmp)
         return new_data
 
-    def insert(self, *args):
-        if len(args) == 1:
-            query = f"INSERT INTO {self.table} VALUES ({args[0]})"
+    def insert(self, collection=list() or dict() or tuple(), **kwargs):
+        if len(collection) > 0:
+            if type(collection) == dict:
+                db_execute_query(self._query_dict_insert(collection))
+                # db_execute_query(self._query_dict_insert(collection))
+                return True
+            else:
+                db_execute_query(self._query_list_insert(collection))
+                return True
+        elif len(kwargs) > 0:
+            db_execute_query(self._query_dict_insert(kwargs))
+            return True
         else:
-            query = f"INSERT INTO {self.table} VALUES {args}"
-        db_execute_query(query)
-        return True
+            db_execute_query(f'INSERT INTO {self.table} VALUES ()')
+            return True
+
+    def __sql_tuple(self, values):
+        query = "("
+        for elem in values:
+            if type(elem) != str or elem.upper() == 'DEFAULT':
+                query += str(elem)
+                query += ", "
+            else:
+                query += f"'{elem}'"
+                query += ", "
+        query = query.rstrip(" ,")
+        query += ");"
+        return query
+
+    def _query_list_insert(self, collection):
+        query = f"INSERT INTO {self.table} VALUES "
+        query += self.__sql_tuple(collection)
+        return query
+
+    def _query_dict_insert(self, dict):
+        keys = tuple(dict)
+        values = tuple(dict.values())
+        query = f"INSERT INTO {self.table}("
+        for elem in keys:
+            query += f"{elem}"
+            query += ", "
+        query = query.rstrip(" ,")
+        query += ") VALUES "
+        query += self.__sql_tuple(values)
+
+        return query
 
     def drop(self):
         db_execute_query(f"DROP TABLE {self.table}")
@@ -95,7 +134,8 @@ class NewTable:
             sql += tmp
         sql = sql.rstrip(', ')
         sql += ");"
-        return sql
+        db_execute_query(sql)
+        return True
 
 
 class Table:
@@ -105,15 +145,3 @@ class Table:
             return NewTable(table_name)
         else:
             return CreatedTable(table_name)
-
-# class NewTable:
-#     def __init__(self, table_name):
-#         self.table = table_name
-#         self.columns = []
-#         self.query = "CREATE TABLE("
-#
-#     def id(self):
-#         self.columns.append({'id' : []})
-#
-#     def create_table(self):
-#         pass
