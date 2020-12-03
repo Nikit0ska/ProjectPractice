@@ -6,16 +6,8 @@ import pyodbc
 print(pyodbc.drivers())
 
 db_funcs.db_connect('PostgreSQL Unicode', 'localhost', 5432, 'nikit0ska', user='nikit0ska', password='abc123', autocomm=True)
+b = Table('test1')
 
-a = Table('test')
-if type(a) == NewTable:
-    a.id()
-    a.string('username', 20)
-    a.integer('age').default(0)
-    a.create_table()
-else:
-    a.insert({'username': 'w', 'age': '22'})
-    print(a.get_form_data())
+b.integer('foreign_field', is_foreign=True).constraint('some_cons').on_delete(set_null=True).references('some_table', 'some_field')
 
-
-
+b.create_table()
