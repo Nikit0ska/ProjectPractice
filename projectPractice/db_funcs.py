@@ -2,6 +2,7 @@ import threading
 
 from projectPractice.Connector import Connector
 from projectPractice.ConnThread import ConnThread
+from projectPractice.Table import *
 import projectPractice.errors as errors
 
 
@@ -34,9 +35,19 @@ def db_disconnect():
 
 
 @errors.err_decor
-def db_read_table(table_name):
+def db_read_table(table, limit=0, sql_condition='', order_by=('', '')):
     conn = __get_conn_thread().connector
-    conn.execute(f"SELECT * FROM {table_name};")
+    if type(table) == CreatedTable:
+        return table.get_data()
+    query = f'SELECT * FROM {table}'
+    if sql_condition != '':
+        query += f" where {sql_condition}"
+    if order_by != ('', ''):
+        query += f" order by {order_by[0]} {order_by[1]}"
+    if limit != 0:
+        query += f" limit {limit}"
+    query += ';'
+    conn.execute(query)
     return conn.cursor.fetchall()
 
 
