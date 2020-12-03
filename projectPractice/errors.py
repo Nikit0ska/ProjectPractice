@@ -2,12 +2,12 @@ from pyodbc import Error
 
 
 def err_decor(db_func):
-    def wrapper(*args):
+    def wrapper(*args, **kwargs):
         try:
             if len(args) > 0:
-                return db_func(*args)
+                return db_func(*args, **kwargs)
             else:
-                return db_func()
+                return db_func(**kwargs)
         except Error as ex:
             if len(ex.args) > 1:
                 raise OdbcError(ex.args[1]) from None
