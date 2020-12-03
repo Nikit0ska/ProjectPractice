@@ -1,4 +1,4 @@
-from projectPractice.db_funcs import *
+from projectPractice import db_funcs
 
 
 class Field:
@@ -27,17 +27,17 @@ class CreatedTable:
     def __init__(self, table_name):
         self.table = table_name
         self.columns = {}
-        data = db_execute_query(f"select column_name,data_type from information_schema.columns "
+        data = db_funcs.db_execute_query(f"select column_name,data_type from information_schema.columns "
                                 f"where table_name = '{table_name}';")
 
         for elem in data:
             self.columns[elem[0]] = elem[1]
 
     def get_data(self):
-        return db_read_table(self.table)
+        return db_funcs.db_read_table(self.table)
 
     def get_form_data(self):
-        data = db_read_table(self.table)
+        data = db_funcs.db_read_table(self.table)
         new_data = []
         for elem in data:
             tmp = {}
@@ -50,17 +50,17 @@ class CreatedTable:
     def insert(self, collection=list() or dict() or tuple(), **kwargs):
         if len(collection) > 0:
             if type(collection) == dict:
-                db_execute_query(self._query_dict_insert(collection))
+                db_funcs.db_execute_query(self._query_dict_insert(collection))
                 # db_execute_query(self._query_dict_insert(collection))
                 return True
             else:
-                db_execute_query(self._query_list_insert(collection))
+                db_funcs.db_execute_query(self._query_list_insert(collection))
                 return True
         elif len(kwargs) > 0:
-            db_execute_query(self._query_dict_insert(kwargs))
+            db_funcs.db_execute_query(self._query_dict_insert(kwargs))
             return True
         else:
-            db_execute_query(f'INSERT INTO {self.table} VALUES ()')
+            db_funcs.db_execute_query(f'INSERT INTO {self.table} VALUES ()')
             return True
 
     def __sql_tuple(self, values):
@@ -95,7 +95,7 @@ class CreatedTable:
         return query
 
     def drop(self):
-        db_execute_query(f"DROP TABLE {self.table}")
+        db_funcs.db_execute_query(f"DROP TABLE {self.table}")
         return True
 
 
@@ -124,6 +124,21 @@ class NewTable:
         self.fields.append(field)
         return field
 
+    def bool(self, name):
+        field = Field(name, 'boolean')
+        self.fields.append(field)
+        return field
+
+    def binary(self, name):
+        field = Field(name, 'bytea')
+        self.fields.append(field)
+        return field
+
+    def char(self, name):
+        field = Field(name, 'char')
+        self.fields.append(field)
+        return field
+
     def create_table(self):
         sql = f"CREATE TABLE {self.table}("
         for elem in self.fields:
@@ -134,13 +149,13 @@ class NewTable:
             sql += tmp
         sql = sql.rstrip(', ')
         sql += ");"
-        db_execute_query(sql)
-        return True
+        db_funcs.db_execute_query(sql)
+        return Table(self.table)
 
 
 class Table:
     def __new__(cls, table_name):
-        a = db_execute_query(f"select * from pg_tables where tablename='{table_name}'")
+        a = db_funcs.db_execute_query(f"select * from pg_tables where tablename='{table_name}'")
         if len(a) == 0:
             return NewTable(table_name)
         else:
