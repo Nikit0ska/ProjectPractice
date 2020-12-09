@@ -7,10 +7,6 @@ class Field:
         self._field_type = type
         self._params = []
 
-    def autoincrement(self):
-        self._params.append('SERIAL')
-        return self
-
     def default(self, default_value):
         self._params.append(f"DEFAULT '{default_value}'")
         return self
@@ -20,6 +16,14 @@ class Field:
             self._params.append(f"NULL")
         else:
             self._params.append("NOT NULL")
+        return self
+
+    def primary_key(self):
+        self._params.append('primary key')
+        return self
+
+    def unique(self):
+        self._params.append('unique')
         return self
 
 
@@ -58,16 +62,74 @@ class CreatedTable:
         self.table = table_name
         self.columns = {}
         data = db_funcs.db_execute_query(f"select column_name,data_type from information_schema.columns "
-                                f"where table_name = '{table_name}';")
-
+                                f"where table_name = '{self.table}';")
         for elem in data:
             self.columns[elem[0]] = elem[1]
+        self.selected_data = []
 
     def get_data(self):
         return db_funcs.db_read_table(self.table)
 
+    def find(self, id, name_id_field='id'):
+        self.selected_data.extend(db_funcs.db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {name_id_field}={id}"))
+        return self
+
+    def where(self, column, sql_operator, value):
+        if type(value) == str:
+            self.selected_data.extend(db_funcs.db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} '{value}'"))
+        else:
+            self.selected_data.extend(db_funcs.db_execute_query(
+                f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} {value}"))
+        return self
+
+    def get_selected_data(self):
+        return self.__make_dict_data(self.selected_data)
+
+    def clear_selected_data(self):
+        self.selected_data = []
+        return self
+
+    def delete(self):
+        data = self.get_selected_data()
+        for elem in data:
+            sql = f"DELETE FROM {self.table} WHERE "
+            for key in elem:
+                if type(elem[key]) == str:
+                    sql += f"{key} = '{elem[key]}' and "
+                else:
+                    sql += f"{key} = {elem[key]} and "
+            sql = sql.rstrip("and ")
+            sql += ";"
+            db_funcs.db_execute_query(sql)
+        return True
+
+    def update(self, **kwargs):
+        data = self.get_selected_data()
+        for elem in data:
+            sql = f"UPDATE {self.table} SET "
+            for value in kwargs:
+                if type(kwargs[value]) == str:
+                    sql += f"{value} = '{kwargs[value]}'"
+                else:
+                    sql += f"{value} = {kwargs[value]}"
+                sql += ', '
+            sql = sql.rstrip(', ')
+            sql += " WHERE "
+            for key in elem:
+                if type(elem[key]) == str:
+                    sql += f"{key} = '{elem[key]}' and "
+                else:
+                    sql += f"{key} = {elem[key]} and "
+            sql = sql.rstrip("and ")
+            sql += ";"
+            db_funcs.db_execute_query(sql)
+        return True
+
     def get_form_data(self):
-        data = db_funcs.db_read_table(self.table)
+        data = db_funcs.db_execute_query(f"SELECT {', '.join(self.columns)} FROM {self.table}")
+        return self.__make_dict_data(data)
+
+    def __make_dict_data(self, data):
         new_data = []
         for elem in data:
             tmp = {}
@@ -137,7 +199,13 @@ class NewTable:
     def id(self):
         field = Field('id', 'serial')
         field._params.append('UNIQUE')
+        field._params.append('PRIMARY KEY')
         self.fields.append(field)
+
+    def autoincrement(self, name):
+        field = Field(name, 'serial')
+        self.fields.append(field)
+        return field
 
     def integer(self, name, is_foreign=False):
         if is_foreign:
@@ -149,26 +217,46 @@ class NewTable:
         return field
 
     def text(self, name, is_foreign=False):
+        if is_foreign:
+            field = ForeignField(name, 'text')
+            self.fields.append(field)
+            return field
         field = Field(name, 'text')
         self.fields.append(field)
         return field
 
     def string(self, name, length, is_foreign=False):
+        if is_foreign:
+            field = ForeignField(name, f'varchar({length})')
+            self.fields.append(field)
+            return field
         field = Field(name, f'varchar({length})')
         self.fields.append(field)
         return field
 
     def bool(self, name, is_foreign=False):
+        if is_foreign:
+            field = ForeignField(name, f'boolean')
+            self.fields.append(field)
+            return field
         field = Field(name, 'boolean')
         self.fields.append(field)
         return field
 
     def binary(self, name, is_foreign=False):
+        if is_foreign:
+            field = ForeignField(name, f'bytea')
+            self.fields.append(field)
+            return field
         field = Field(name, 'bytea')
         self.fields.append(field)
         return field
 
     def char(self, name, is_foreign=False):
+        if is_foreign:
+            field = ForeignField(name, f'char')
+            self.fields.append(field)
+            return field
         field = Field(name, 'char')
         self.fields.append(field)
         return field
@@ -191,9 +279,9 @@ class NewTable:
                 sql += tmp
         sql = sql.rstrip(', ')
         sql += ");"
-        print(sql)
-        # db_funcs.db_execute_query(sql)
-        # return Table(self.table)
+
+        db_funcs.db_execute_query(sql)
+        return True
 
 
 class Table:
