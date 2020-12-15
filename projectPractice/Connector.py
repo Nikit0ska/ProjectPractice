@@ -14,6 +14,8 @@ class Connector:
         self.cursor = self.connection.cursor()
         self.connection.autocommit = autocommit
         self.is_connected = True
+        self.con_params = {'driver': driver, 'server': server, 'port': port, 'database': database, 'user': uid,
+                           'password': pwd, 'autocommit': autocommit}
 
     def new_connect(self, driver, server, port, database, uid=str(), pwd=str(), autocommit=True):
         self.connection = pyodbc.connect(
@@ -31,4 +33,3 @@ class Connector:
         self.connection.close()
         self.is_connected = False
         self.connection = None
-
