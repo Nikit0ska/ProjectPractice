@@ -103,7 +103,8 @@ def __get_dict_csv(path, delimiter, quotechar):
                     continue
             else:
                 for i in range(len(row)):
-                    if row[i].replace(" ", "") != '' and fields[i][1] == 'real' and not(row[i].replace(" ", "").isdigit()):
+                    if row[i].replace(" ", "") != '' and fields[i][1] == 'real' and not (
+                    row[i].replace(" ", "").isdigit()):
                         fields[i][1] = 'varchar(255)'
                     temp[fields[i][0]] = row[i].replace(" ", "")
             return_data.append(temp)
@@ -145,69 +146,51 @@ def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
             db_execute_query(sql_insert)
 
 
-def __get_fields_dict(path):
-    book = xlrd3.open_workbook(path)
-    sh = book.sheet_by_index(0)
-    fields = []
-
-    for elem in sh.row(0):
-        field_name = (str(elem).split(":")[1].replace("'", ""))
-        fields.append([field_name, set()])
-
-    for i in range(1, sh.nrows):
-        for j in range(sh.ncols):
-            if sh.cell_type(i, j) is xlrd3.XL_CELL_TEXT:
-                fields[j][1].add("varchar(255)")
-
-            elif sh.cell_type(i, j) is xlrd3.XL_CELL_NUMBER:
-                fields[j][1].add("real")
-
-            elif sh.cell_type(i, j) is xlrd3.XL_CELL_BOOLEAN:
-                fields[j][1].add("bool")
-
-            elif sh.cell_type(i, j) is xlrd3.XL_CELL_DATE:
-                fields[j][1].add("date")
-
-    for i in range(len(fields)):
-        if len(fields[i][1]) != 1:
-            fields[i][1] = {'text'}
-        fields[i][1] = str(fields[i][1])[2:-2]
-    return fields
-
-
-
-def __get_data_arr(path, fields):
-    book = xlrd3.open_workbook(path)
-    sh = book.sheet_by_index(0)
-    data = []
-    for i in range(1, sh.nrows):
-        temp_data = []
-        for j in range(sh.ncols):
-            if (fields[j][1] == 'date'):
-                date = xlrd3.xldate_as_datetime(sh[i][j].value, book.datemode)
-                temp_data.append(f"'{str(date.date())}'")
-            elif (fields[j][1] == 'varchar(255)'):
-                temp_data.append(f"'{sh[i][j].value}'")
-            else:
-                temp_data.append(sh[i][j].value)
-        data.append(temp_data)
-    return data
-
-
 def import_xl_db(table_name, path):
-    fields = __get_fields_dict(path)
+    book = xlrd3.open_workbook(path)
+    sh = book.sheet_by_index(0)
+    fields = [[i.value, set()] for i in sh.row(0)]
+    data = []
+
+    for row in range(1, sh.nrows):
+        temp_arr = []
+        for col in range(sh.ncols):
+            cell = sh[row][col]
+            temp_arr.append(cell.value)
+            fields[col][1].add(cell.ctype)
+        data.append(temp_arr)
+
+    for elem in fields:
+        if len(elem[1]) > 1:
+            elem[1] = {xlrd3.XL_CELL_TEXT}
+        cell_type = elem[1].pop()
+        if cell_type == xlrd3.XL_CELL_DATE:
+            elem[1] = 'date'
+        elif cell_type == xlrd3.XL_CELL_TEXT:
+            elem[1] = 'varchar(255)'
+        elif cell_type == xlrd3.XL_CELL_BOOLEAN:
+            elem[1] = 'boolean'
+        elif cell_type == xlrd3.XL_CELL_NUMBER:
+            elem[1] = 'real'
+
     sql = f"CREATE TABLE {table_name}("
-    for field in fields:
-        sql += f"{field[0].replace(' ', '_')} {field[1]} NULL, "
+    for elem in fields:
+        sql += f"{elem[0].replace(' ', '')} {elem[1]} NULL, "
     sql = sql.rstrip(", ")
     sql += ");"
-    db_funcs.db_execute_query(sql)
-    data = __get_data_arr(path, fields)
-    for elem in data:
+    db_execute_query(sql)
+    for row in data:
         sql = f"INSERT INTO {table_name} VALUES("
-        for value in elem:
-            sql += f"{value}, "
+        for col in range(len(row)):
+            if fields[col][1] == 'varchar(255)':
+                sql += f"'{row[col]}', "
+            elif fields[col][1] == 'date':
+                date = xlrd3.xldate_as_datetime(row[col], book.datemode)
+                sql += f"'{str(date.date())}', "
+            else:
+                sql += f"{row[col]}, "
         sql = sql.rstrip(", ")
         sql += ");"
-        db_funcs.db_execute_query(sql)
+        db_execute_query(sql)
     return True
+
