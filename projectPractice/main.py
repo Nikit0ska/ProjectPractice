@@ -1,14 +1,36 @@
 from projectPractice import db_funcs
 from projectPractice.Table import *
 import pyodbc
-# import time
+
 
 
 print(pyodbc.drivers())
 
-# start_time = time.time()
-db_funcs.db_connect('PostgreSQL Unicode', 'localhost', 5432, 'nikit0ska', user='nikit0ska', password='abc123', autocomm=True)
-# db_funcs.import_csv_db('csv_table','Financial Sample.csv', delimiter=";")
-db_funcs.import_xl_db('test', 'Financial Sample.xlsx')
-# print("--- %s seconds ---" % (time.time() - start_time))
+
+db_funcs.db_connect('Devart ODBC Driver for MongoDB', '127.0.0.1', '27017', 'nikit0ska', autocomm=True)
+
+table = Table('test')
+table.string('name', 255)
+table.integer('age')
+table.string('description', 255)
+table.create_table()
+
+table = Table('test')
+print(table.get_form_data())
+print()
+table.insert(name='test1', age=1)
+table.insert(name='test2', age=2, description="asdwadwadwqewqhqhehhqwhequhhu`12317")
+print(table.get_form_data())
+print()
+table.where('age', '=', '1')
+table.update(description='new description')
+table.clear_selected_data()
+print(table.get_form_data())
+print()
+table.where('age', '=', '2')
+table.delete()
+print(table.get_form_data())
+
+db_funcs.import_csv_db("csv", 'cities.csv')
+
 

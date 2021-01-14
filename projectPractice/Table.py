@@ -1,5 +1,5 @@
 from projectPractice import db_funcs
-
+from projectPractice.errors import OdbcError
 
 class Field:
     def __init__(self, name, type):
@@ -61,10 +61,14 @@ class CreatedTable:
     def __init__(self, table_name):
         self.table = table_name
         self.columns = {}
-        data = db_funcs.db_execute_query(f"select column_name,data_type from information_schema.columns "
-                                f"where table_name = '{self.table}';")
-        for elem in data:
-            self.columns[elem[0]] = elem[1]
+        db_funcs.db_execute_query(f"select * from {self.table} LIMIT 1")
+        cursor = db_funcs.get_cursor()
+        columns = [column[0] for column in cursor.description]
+        columns_type = [column[1] for column in cursor.description]
+
+        for i in range(len(cursor.description)):
+            self.columns[columns[i]] = columns_type[i]
+
         self.selected_data = []
 
     def get_data(self):
@@ -118,10 +122,14 @@ class CreatedTable:
             for key in elem:
                 if type(elem[key]) == str:
                     sql += f"{key} = '{elem[key]}' and "
+                elif elem[key] is None:
+                    print(1)
+                    sql += f"{key} is NULL and "
                 else:
                     sql += f"{key} = {elem[key]} and "
             sql = sql.rstrip("and ")
             sql += ";"
+            print(sql)
             db_funcs.db_execute_query(sql)
         return True
 
@@ -286,8 +294,10 @@ class NewTable:
 
 class Table:
     def __new__(cls, table_name):
-        a = db_funcs.db_execute_query(f"select * from pg_tables where tablename='{table_name}'")
-        if len(a) == 0:
+        # a = db_funcs.db_execute_query(f"select * from pg_tables where tablename='{table_name}'")
+        try:
+            db_funcs.db_execute_query(f"select * from {table_name}")
+        except OdbcError:
             return NewTable(table_name)
-        else:
-            return CreatedTable(table_name)
+
+        return CreatedTable(table_name)

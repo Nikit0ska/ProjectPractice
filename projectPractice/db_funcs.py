@@ -53,6 +53,9 @@ def db_read_table(table, limit=0, sql_condition='', order_by=('', '')):
     return conn.cursor.fetchall()
 
 
+def get_cursor():
+    return __get_conn_thread().connector.cursor
+
 @errors.err_decor
 def db_execute_query(query):
     conn = __get_conn_thread().connector
@@ -110,7 +113,6 @@ def __get_dict_csv(path, delimiter, quotechar):
             return_data.append(temp)
             counter += 1
     return_data[0] = fields
-    print(return_data)
     return return_data
 
 
@@ -123,14 +125,16 @@ def __get_field_type(d, field_name):
 def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
     data = __get_dict_csv(path, delimiter, quotechar)
     sql_ct = f"CREATE TABLE {table_name}("
+    fields = [i[0] for i in data[0]]
     for field in data[0]:
         sql_ct += f"{field[0]} {field[1]} NULL, "
     sql_ct = sql_ct.rstrip(', ')
     sql_ct += ");"
+    print(fields)
     db_execute_query(sql_ct)
     for row in data[1:]:
         if row != {}:
-            sql_insert = f"INSERT INTO {table_name} VALUES ("
+            sql_insert = f"INSERT INTO {table_name}({', '.join(fields)}) VALUES ("
             for elem in row:
                 if __get_field_type(data[0], elem) == 'real':
                     if row[elem] == '':
