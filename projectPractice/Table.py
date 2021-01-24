@@ -1,6 +1,13 @@
 from projectPractice import db_funcs
 from projectPractice.errors import OdbcError
 
+
+def get_sup_type(some_type):
+    for elem in db_funcs.DATA_TYPES:
+        if elem in some_type or some_type in elem:
+            return elem
+
+
 class Field:
     def __init__(self, name, type):
         self._field_name = name
@@ -16,6 +23,10 @@ class Field:
             self._params.append(f"NULL")
         else:
             self._params.append("NOT NULL")
+        return self
+
+    def autoincrement(self):
+        self._params.append('autoincrement')
         return self
 
     def primary_key(self):
@@ -123,13 +134,11 @@ class CreatedTable:
                 if type(elem[key]) == str:
                     sql += f"{key} = '{elem[key]}' and "
                 elif elem[key] is None:
-                    print(1)
                     sql += f"{key} is NULL and "
                 else:
                     sql += f"{key} = {elem[key]} and "
             sql = sql.rstrip("and ")
             sql += ";"
-            print(sql)
             db_funcs.db_execute_query(sql)
         return True
 
@@ -200,6 +209,7 @@ class CreatedTable:
 
 
 class NewTable:
+
     def __init__(self, table_name):
         self.table = table_name
         self.fields = []
@@ -216,58 +226,112 @@ class NewTable:
         return field
 
     def integer(self, name, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, 'integer')
+        field_type = get_sup_type('int')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
             self.fields.append(field)
             return field
-        field = Field(name, 'integer')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'integer' type")
 
     def text(self, name, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, 'text')
+        field_type = get_sup_type('text')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, 'text')
+                self.fields.append(field)
+                return field
+            field = Field(name, 'text')
             self.fields.append(field)
             return field
-        field = Field(name, 'text')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'text' type")
 
     def string(self, name, length, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, f'varchar({length})')
+        field_type = get_sup_type('varchar')
+        if field_type is None:
+            field_type = get_sup_type('string')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, f'{field_type}({length})')
+                self.fields.append(field)
+                return field
+            field = Field(name, f'{field_type}({length})')
             self.fields.append(field)
             return field
-        field = Field(name, f'varchar({length})')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'string' type")
 
     def bool(self, name, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, f'boolean')
+        field_type = get_sup_type('bool')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
             self.fields.append(field)
             return field
-        field = Field(name, 'boolean')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'bool' type")
 
     def binary(self, name, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, f'bytea')
+        field_type = get_sup_type('binar')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
             self.fields.append(field)
             return field
-        field = Field(name, 'bytea')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'binary' type")
 
     def char(self, name, is_foreign=False):
-        if is_foreign:
-            field = ForeignField(name, f'char')
+        field_type = get_sup_type('char')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
             self.fields.append(field)
             return field
-        field = Field(name, 'char')
-        self.fields.append(field)
-        return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'char' type")
+
+    def real(self, name, is_foreign=False):
+        field_type = get_sup_type('real')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
+            self.fields.append(field)
+            return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'real' type")
+
+    def float(self, name, is_foreign=False):
+        field_type = get_sup_type('float')
+        if field_type is None:
+            field_type = get_sup_type('double')
+        if field_type is not None:
+            if is_foreign:
+                field = ForeignField(name, field_type)
+                self.fields.append(field)
+                return field
+            field = Field(name, field_type)
+            self.fields.append(field)
+            return field
+        else:
+            raise TypeError("ODBC Driver doesn't support 'float' type")
 
     def create_table(self):
         sql = f"CREATE TABLE {self.table}("
@@ -294,7 +358,6 @@ class NewTable:
 
 class Table:
     def __new__(cls, table_name):
-        # a = db_funcs.db_execute_query(f"select * from pg_tables where tablename='{table_name}'")
         try:
             db_funcs.db_execute_query(f"select * from {table_name}")
         except OdbcError:

@@ -4,19 +4,17 @@ import xlrd3
 
 from projectPractice.Connector import Connector
 from projectPractice.ConnThread import ConnThread
-from projectPractice.Table import *
 import projectPractice.errors as errors
+DATA_TYPES = []
 
-
-# Для MongoDB: https://www.cdata.com/drivers/mongodb/download/odbc/
-# Для PosgreSQL: https://ftp.postgresql.org/pub/odbc/versions/msi/psqlodbc_12_02_0000.zip
-# Посмотреть установленные драйвера: pyodbc.drivers()
 
 
 def db_connect(driver, server, port, db, user='', password='', autocomm=True):
+    global DATA_TYPES
     conn = Connector(driver, server, port, db, uid=user, pwd=password, autocommit=autocomm)
     thread = ConnThread(conn)
     thread.start()
+    DATA_TYPES = [i[0] for i in get_cursor().getTypeInfo()]
 
 
 def __get_conn_thread():
@@ -39,8 +37,6 @@ def db_disconnect():
 @errors.err_decor
 def db_read_table(table, limit=0, sql_condition='', order_by=('', '')):
     conn = __get_conn_thread().connector
-    if type(table) == CreatedTable:
-        return table.get_data()
     query = f'SELECT * FROM {table}'
     if sql_condition != '':
         query += f" where {sql_condition}"
@@ -130,7 +126,6 @@ def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
         sql_ct += f"{field[0]} {field[1]} NULL, "
     sql_ct = sql_ct.rstrip(', ')
     sql_ct += ");"
-    print(fields)
     db_execute_query(sql_ct)
     for row in data[1:]:
         if row != {}:
@@ -145,7 +140,6 @@ def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
                     sql_insert += f"'{(row[elem])}', "
             sql_insert = sql_insert.rstrip(', ')
             sql_insert += ");"
-            # print(sql_insert)
 
             db_execute_query(sql_insert)
 
@@ -168,7 +162,7 @@ def import_xl_db(table_name, path):
         if len(elem[1]) > 1:
             elem[1] = {xlrd3.XL_CELL_TEXT}
         cell_type = elem[1].pop()
-        if cell_type == xlrd3.XL_CELL_DATE:
+        if cell_type == xlrd3.XL_CELL_DATE and 'date' in DATA_TYPES:
             elem[1] = 'date'
         elif cell_type == xlrd3.XL_CELL_TEXT:
             elem[1] = 'varchar(255)'
@@ -182,9 +176,10 @@ def import_xl_db(table_name, path):
         sql += f"{elem[0].replace(' ', '')} {elem[1]} NULL, "
     sql = sql.rstrip(", ")
     sql += ");"
+    fields_name = [i[0].replace(' ', '') for i in fields]
     db_execute_query(sql)
     for row in data:
-        sql = f"INSERT INTO {table_name} VALUES("
+        sql = f"INSERT INTO {table_name}({', '.join(fields_name)}) VALUES("
         for col in range(len(row)):
             if fields[col][1] == 'varchar(255)':
                 sql += f"'{row[col]}', "
