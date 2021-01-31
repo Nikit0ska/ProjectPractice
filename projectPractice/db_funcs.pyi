@@ -2,7 +2,8 @@ from projectPractice.ConnThread import ConnThread
 from pyodbc import Cursor
 from projectPractice.Table import Table
 
-DATA_TYPES = []
+DATA_TYPES: list
+DB_NAME: str
 def __get_conn_thread() -> ConnThread:...
 def get_cursor() -> Cursor:...
 def db_connect(driver: str, server: str, port: str or int, db: str, user='', password='', autocomm=True) -> None:...

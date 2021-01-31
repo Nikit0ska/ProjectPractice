@@ -24,4 +24,9 @@ class OdbcConnectionError(OdbcError):
     pass
 
 
+class OdbcTypeError(OdbcError):
+    pass
 
+
+class TableError(Error):
+    pass

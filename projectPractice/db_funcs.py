@@ -1,20 +1,20 @@
 import threading
-
+from pyodbc import SQL_DBMS_NAME
 import xlrd3
-
 from projectPractice.Connector import Connector
 from projectPractice.ConnThread import ConnThread
 import projectPractice.errors as errors
 DATA_TYPES = []
-
+DB_NAME = ""
 
 
 def db_connect(driver, server, port, db, user='', password='', autocomm=True):
-    global DATA_TYPES
+    global DATA_TYPES, DB_NAME
     conn = Connector(driver, server, port, db, uid=user, pwd=password, autocommit=autocomm)
     thread = ConnThread(conn)
     thread.start()
     DATA_TYPES = [i[0] for i in get_cursor().getTypeInfo()]
+    DB_NAME = conn.connection.getinfo(SQL_DBMS_NAME)
 
 
 def __get_conn_thread():
@@ -127,9 +127,10 @@ def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
     sql_ct = sql_ct.rstrip(', ')
     sql_ct += ");"
     db_execute_query(sql_ct)
+    sql_insert = ""
     for row in data[1:]:
         if row != {}:
-            sql_insert = f"INSERT INTO {table_name}({', '.join(fields)}) VALUES ("
+            sql_insert += f"INSERT INTO {table_name}({', '.join(fields)}) VALUES ("
             for elem in row:
                 if __get_field_type(data[0], elem) == 'real':
                     if row[elem] == '':
@@ -141,7 +142,7 @@ def import_csv_db(table_name, path, delimiter=',', quotechar=';'):
             sql_insert = sql_insert.rstrip(', ')
             sql_insert += ");"
 
-            db_execute_query(sql_insert)
+    db_execute_query(sql_insert)
 
 
 def import_xl_db(table_name, path):
@@ -178,8 +179,9 @@ def import_xl_db(table_name, path):
     sql += ");"
     fields_name = [i[0].replace(' ', '') for i in fields]
     db_execute_query(sql)
+    sql = ""
     for row in data:
-        sql = f"INSERT INTO {table_name}({', '.join(fields_name)}) VALUES("
+        sql += f"INSERT INTO {table_name}({', '.join(fields_name)}) VALUES("
         for col in range(len(row)):
             if fields[col][1] == 'varchar(255)':
                 sql += f"'{row[col]}', "
@@ -190,6 +192,5 @@ def import_xl_db(table_name, path):
                 sql += f"{row[col]}, "
         sql = sql.rstrip(", ")
         sql += ");"
-        db_execute_query(sql)
+    db_execute_query(sql)
     return True
-
