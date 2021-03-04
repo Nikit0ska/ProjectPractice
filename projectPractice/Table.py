@@ -1,21 +1,9 @@
-from projectPractice import db_funcs
 from pyodbc import *
-from projectPractice.errors import OdbcError, OdbcTypeError, TableError
 
-
-def find_type_by_name(type_name):
-    for elem in db_funcs.DATA_TYPES:
-        if elem in type_name or type_name in elem:
-            return elem
-
-
-def find_type_by_sqltype(sqltype):
-    type_info = [i[0] for i in db_funcs.get_cursor().getTypeInfo(sqltype)]
-    # print(type_info)
-    if len(type_info) == 1:
-        return type_info[0]
-    elif len(type_info) > 1:
-        return type_info[0][0]
+from projectPractice.sql_types import *
+from projectPractice.db_funcs import *
+from projectPractice.errors import *
+# from projectPractice.errors.decorators import decorator_function_with_arguments
 
 
 class Field:
@@ -36,7 +24,9 @@ class Field:
         return self
 
     def autoincrement(self):
-        if db_funcs.DB_NAME.lower() == "postgresql":
+        db = get_db_name()
+        print(db)
+        if db.lower() == "postgresql":
             self._field_type = "SERIAL"
         else:
             self._params.append('autoincrement')
@@ -85,8 +75,8 @@ class CreatedTable:
     def __init__(self, table_name):
         self.table = table_name
         self.columns = {}
-        db_funcs.db_execute_query(f"select * from {self.table} LIMIT 1")
-        cursor = db_funcs.get_cursor()
+        db_execute_query(f"select * from {self.table} LIMIT 1")
+        cursor = get_cursor()
         columns = [column[0] for column in cursor.description]
         columns_type = [column[1] for column in cursor.description]
 
@@ -96,17 +86,17 @@ class CreatedTable:
         self.selected_data = []
 
     def get_data(self):
-        return db_funcs.db_read_table(self.table)
+        return db_read_table(self.table)
 
     def find(self, id, name_id_field='id'):
-        self.selected_data.extend(db_funcs.db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {name_id_field}={id}"))
+        self.selected_data.extend(db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {name_id_field}={id}"))
         return self
 
     def where(self, column, sql_operator, value):
         if type(value) == str:
-            self.selected_data.extend(db_funcs.db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} '{value}'"))
+            self.selected_data.extend(db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} '{value}'"))
         else:
-            self.selected_data.extend(db_funcs.db_execute_query(
+            self.selected_data.extend(db_execute_query(
                 f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} {value}"))
         return self
 
@@ -128,7 +118,7 @@ class CreatedTable:
                     sql += f"{key} = {elem[key]} and "
             sql = sql.rstrip("and ")
             sql += ";"
-            db_funcs.db_execute_query(sql)
+            db_execute_query(sql)
         return True
 
     def update(self, **kwargs):
@@ -152,11 +142,11 @@ class CreatedTable:
                     sql += f"{key} = {elem[key]} and "
             sql = sql.rstrip("and ")
             sql += ";"
-            db_funcs.db_execute_query(sql)
+            db_execute_query(sql)
         return True
 
     def get_form_data(self):
-        data = db_funcs.db_execute_query(f"SELECT {', '.join(self.columns)} FROM {self.table}")
+        data = db_execute_query(f"SELECT {', '.join(self.columns)} FROM {self.table}")
         return self.__make_dict_data(data)
 
     def __make_dict_data(self, data):
@@ -172,17 +162,17 @@ class CreatedTable:
     def insert(self, collection=list() or dict() or tuple(), **kwargs):
         if len(collection) > 0:
             if type(collection) == dict:
-                db_funcs.db_execute_query(self._query_dict_insert(collection))
+                db_execute_query(self._query_dict_insert(collection))
                 # db_execute_query(self._query_dict_insert(collection))
                 return True
             else:
-                db_funcs.db_execute_query(self._query_list_insert(collection))
+                db_execute_query(self._query_list_insert(collection))
                 return True
         elif len(kwargs) > 0:
-            db_funcs.db_execute_query(self._query_dict_insert(kwargs))
+            db_execute_query(self._query_dict_insert(kwargs))
             return True
         else:
-            db_funcs.db_execute_query(f'INSERT INTO {self.table} VALUES ()')
+            db_execute_query(f'INSERT INTO {self.table} VALUES ()')
             return True
 
     def __sql_tuple(self, values):
@@ -217,7 +207,7 @@ class CreatedTable:
         return query
 
     def drop(self):
-        db_funcs.db_execute_query(f"DROP TABLE {self.table}")
+        db_execute_query(f"DROP TABLE {self.table}")
         return True
 
     def __getattr__(self, item):
@@ -232,113 +222,108 @@ class NewTable:
         self.fields = []
 
     def id(self):
+        # db = get_db_name()
+        # print(db)
+
+        # field = self.integer('id').autoincrement()
+
         field = self.integer("id").autoincrement()
         field.unique()
         field.primary_key()
 
     def integer(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_INTEGER)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'integer' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
 
+
+    @decorator_function_with_arguments(SQL_TEXT, "Text")
     def text(self, name, is_foreign=False):
-        field_type = find_type_by_name('text')
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+        field_type = find_type_by_sqltype(SQL_TEXT)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise TypeError("ODBC Driver doesn't support 'text' type. Try to use 'string' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
 
+    # @decorator_function_with_arguments(SQL_VARCHAR, "String")
     def string(self, name, length, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_VARCHAR)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, f'{field_type}({length})')
-                self.fields.append(field)
-                return field
-            field = Field(name, f'{field_type}({length})')
+        if is_foreign:
+            field = ForeignField(name, f'{field_type}({length})')
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'string' type")
+        field = Field(name, f'{field_type}({length})')
+        self.fields.append(field)
+        return field
 
+    @decorator_function_with_arguments(SQL_BIT, "Boolean")
     def bool(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_BIT)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'bool' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
+
 
     def binary(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_BINARY)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'binary' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
 
     def char(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_CHAR)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'char' type. Try to use 'string' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
+
 
     def real(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_REAL)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'real' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
 
     def float(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_FLOAT)
-        if field_type is not None:
-            if is_foreign:
-                field = ForeignField(name, field_type)
-                self.fields.append(field)
-                return field
-            field = Field(name, field_type)
+
+        if is_foreign:
+            field = ForeignField(name, field_type)
             self.fields.append(field)
             return field
-        else:
-            raise OdbcTypeError("ODBC Driver doesn't support 'float' type")
+        field = Field(name, field_type)
+        self.fields.append(field)
+        return field
+
 
     def create_table(self):
         sql = f"CREATE TABLE {self.table}("
@@ -358,15 +343,15 @@ class NewTable:
                 sql += tmp
         sql = sql.rstrip(', ')
         sql += ");"
-        # print(sql)
-        db_funcs.db_execute_query(sql)
+        print(sql)
+        db_execute_query(sql)
         return True
 
 
 class Table:
     def __new__(cls, table_name):
         try:
-            db_funcs.db_execute_query(f"select * from {table_name}")
+            db_execute_query(f"select * from {table_name}")
         except OdbcError:
             return NewTable(table_name)
 

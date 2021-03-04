@@ -1,12 +1,23 @@
-import threading
-from pyodbc import SQL_DBMS_NAME
+# import threading
+
 import xlrd3
+from pyodbc import SQL_DBMS_NAME
+# from projectPractice.sql_types import SQL_TEXT
+from projectPractice.errors import *
+from projectPractice.ConnThread import ConnThread, get_cursor, __get_conn_thread
 from projectPractice.Connector import Connector
-from projectPractice.ConnThread import ConnThread
-import projectPractice.errors as errors
+
+__all__ = ['db_connect', 'db_execute_query', 'db_disconnect', 'import_xl_db', 'import_csv_db', 'get_db_name', 'get_data_types']
+
+
 DATA_TYPES = []
 DB_NAME = ""
 
+def get_db_name():
+    return DB_NAME
+
+def get_data_types():
+    return DATA_TYPES
 
 def db_connect(driver, server, port, db, user='', password='', autocomm=True):
     global DATA_TYPES, DB_NAME
@@ -16,25 +27,26 @@ def db_connect(driver, server, port, db, user='', password='', autocomm=True):
     DATA_TYPES = [i[0] for i in get_cursor().getTypeInfo()]
     DB_NAME = conn.connection.getinfo(SQL_DBMS_NAME)
 
-
-def __get_conn_thread():
-    con_thread = None
-    for thread in threading.enumerate():
-        if type(thread) == ConnThread:
-            con_thread = thread
-            return con_thread
-    if con_thread is None:
-        raise errors.OdbcConnectionError('No connection')
+    SQL_CUSTOM_TYPES[2000] = find_type_by_name("text")
+    # print(SQL_CUSTOM_TYPES)
 
 
-@errors.err_decor
+def find_type_by_name(type_name):
+    for elem in DATA_TYPES:
+        if elem in type_name or type_name in elem:
+            return elem
+
+
+
+
+@err_decor
 def db_disconnect():
     conn_thread = __get_conn_thread()
     conn_thread.stop_thread()
     return None
 
 
-@errors.err_decor
+@err_decor
 def db_read_table(table, limit=0, sql_condition='', order_by=('', '')):
     conn = __get_conn_thread().connector
     query = f'SELECT * FROM {table}'
@@ -49,10 +61,8 @@ def db_read_table(table, limit=0, sql_condition='', order_by=('', '')):
     return conn.cursor.fetchall()
 
 
-def get_cursor():
-    return __get_conn_thread().connector.cursor
 
-@errors.err_decor
+@err_decor
 def db_execute_query(query):
     conn = __get_conn_thread().connector
     if 'select' in query.lower():
@@ -63,21 +73,21 @@ def db_execute_query(query):
         return 1
 
 
-@errors.err_decor
+@err_decor
 def db_create(db_name):
     conn = __get_conn_thread().connector
     conn.execute(f"CREATE DATABASE {db_name};")
     return True
 
 
-@errors.err_decor
+@err_decor
 def db_drop(db_name):
     conn = __get_conn_thread().connector
     conn.execute(f"DROP DATABASE {db_name};")
     return True
 
 
-@errors.err_decor
+@err_decor
 def db_change(db_name):
     conn = __get_conn_thread().connector
     params = conn.con_params

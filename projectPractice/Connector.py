@@ -1,5 +1,5 @@
 import pyodbc
-from projectPractice.errors import OdbcConnectionError
+import projectPractice.errors
 
 
 class Connector:
@@ -10,7 +10,7 @@ class Connector:
                 f';PWD={pwd};')
         except pyodbc.Error as ex:
             sqlstate = ex.args[1]
-            raise OdbcConnectionError(sqlstate) from None
+            raise projectPractice.errors.OdbcConnectionError(sqlstate) from None
         self.cursor = self.connection.cursor()
         self.connection.autocommit = autocommit
         self.is_connected = True
