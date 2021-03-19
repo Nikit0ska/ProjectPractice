@@ -25,7 +25,7 @@ def decorator_function_with_arguments(sql_type, sql_type_name):
             sql_name = find_type_by_sqltype(sql_type)
             if sql_name is not None:
                 print(is_foreign)
-                f(self, name, is_foreign=is_foreign)
+                return f(self, name, is_foreign=is_foreign)
             else:
                 raise TypeError(f"ODBC Driver doesn't support '{sql_type_name}' type.")
         return wrapped_f
