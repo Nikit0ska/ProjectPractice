@@ -77,11 +77,16 @@ class CreatedTable:
         self.columns = {}
         db_execute_query(f"select * from {self.table} LIMIT 1")
         cursor = get_cursor()
-        columns = [column[0] for column in cursor.description]
-        columns_type = [column[1] for column in cursor.description]
-
-        for i in range(len(cursor.description)):
-            self.columns[columns[i]] = columns_type[i]
+        columns = [column.column_name for column in cursor.columns(table=self.table)]
+        columns_type = [column.type_name for column in cursor.columns(table=self.table)]
+        j = 0
+        for i in (cursor.columns(table=self.table)):
+            modif = {'column_type': columns_type[j],
+                     'nullable': bool(i.nullable),
+                     'default_value': i.column_def
+                     }
+            self.columns[columns[j]] = modif
+            j += 1
 
         self.selected_data = []
 
@@ -345,7 +350,23 @@ class NewTable:
         sql += ");"
         print(sql)
         db_execute_query(sql)
-        return True
+        fields = self.fields
+        table_structure = {}
+        for field in fields:
+            default_value = None
+            for i in field._params:
+                if "DEFAULT" in i:
+                    default_value = i[8:]
+                    break
+                if "autoincrement" in i:
+                    default_value = 'autoincrement'
+                    break
+
+            is_nullable = False if 'NOT NULL' in field._params else True
+            table_structure[field._field_name] = {'column_type': field._field_type,
+                                                  'nullable': is_nullable,
+                                                  'default_value': default_value}
+        return table_structure
 
 
 class Table:
