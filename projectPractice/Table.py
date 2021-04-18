@@ -3,6 +3,8 @@ from pyodbc import *
 from projectPractice.sql_types import *
 from projectPractice.db_funcs import *
 from projectPractice.errors import *
+
+
 # from projectPractice.errors.decorators import decorator_function_with_arguments
 
 
@@ -94,12 +96,14 @@ class CreatedTable:
         return db_read_table(self.table)
 
     def find(self, id, name_id_field='id'):
-        self.selected_data.extend(db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {name_id_field}={id}"))
+        self.selected_data.extend(db_execute_query(
+            f"select {', '.join(self.columns)} from {self.table} where {name_id_field}={id}"))
         return self
 
     def where(self, column, sql_operator, value):
         if type(value) == str:
-            self.selected_data.extend(db_execute_query(f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} '{value}'"))
+            self.selected_data.extend(db_execute_query(
+                f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} '{value}'"))
         else:
             self.selected_data.extend(db_execute_query(
                 f"select {', '.join(self.columns)} from {self.table} where {column} {sql_operator} {value}"))
@@ -217,7 +221,8 @@ class CreatedTable:
 
     def __getattr__(self, item):
         if item in dir(NewTable):
-            raise TableError(f"Method '{item}' is for only creating tables. Table {self.table} already created.")
+            raise TableError(
+                f"Method '{item}' is for only creating tables. Table {self.table} already created.")
 
 
 class NewTable:
@@ -246,7 +251,6 @@ class NewTable:
         field = Field(name, field_type)
         self.fields.append(field)
         return field
-
 
     @decorator_function_with_arguments(SQL_TEXT, "Text")
     def text(self, name, is_foreign=False):
@@ -283,7 +287,6 @@ class NewTable:
         self.fields.append(field)
         return field
 
-
     def binary(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_BINARY)
 
@@ -306,7 +309,6 @@ class NewTable:
         self.fields.append(field)
         return field
 
-
     def real(self, name, is_foreign=False):
         field_type = find_type_by_sqltype(SQL_REAL)
 
@@ -328,7 +330,6 @@ class NewTable:
         field = Field(name, field_type)
         self.fields.append(field)
         return field
-
 
     def create_table(self):
         sql = f"CREATE TABLE {self.table}("
