@@ -1,11 +1,12 @@
 from projectPractice.Table import *
+from projectPractice import db_funcs
 import pyodbc
 
 
 
 print(pyodbc.drivers())
 
-db_funcs.db_connect('PostgreSQL Unicode', '127.0.0.1', '5432', 'nikit0ska', user='nikit0ska', password='abc123', autocomm=True)
+db_funcs.db_connect('PostgreSQL Unicode', '127.0.0.1', '5432', 'root', user='root', password='abc123', autocomm=True)
 # db_funcs.db_connect('Devart ODBC Driver for MongoDB', '127.0.0.1', '27017', 'nikit0ska', autocomm=True)
 
 # db_funcs.import_xl_db('xl', 'Financial Sample.xlsx')
@@ -17,8 +18,7 @@ db_funcs.db_connect('PostgreSQL Unicode', '127.0.0.1', '5432', 'nikit0ska', user
 
 table = Table('test12')
 table.id()
-table.text("tet")
-table.real('aa')
+table.text("text")
 table.integer('age')
 table.string('description', 255)
 table.create_table()
